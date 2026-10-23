@@ -9,27 +9,34 @@ import (
 func SearchNFServiceUri(nfProfile *models.Nrf_NFDisc_NFProfile, serviceName models.Nrf_NFMgmt_ServiceName,
 	nfServiceStatus models.Nrf_NFMgmt_NFServiceStatus,
 ) (nfUri string) {
-	if nfProfile.NfServices != nil {
-		for _, service := range nfProfile.NfServices {
-			if service.ServiceName == serviceName && service.NfServiceStatus == nfServiceStatus {
-				if nfProfile.Fqdn != "" {
-					nfUri = nfProfile.Fqdn
-				} else if service.Fqdn != "" {
-					nfUri = service.Fqdn
-				} else if service.ApiPrefix != "" {
-					nfUri = service.ApiPrefix
-				} else if service.IpEndPoints != nil {
-					point := (service.IpEndPoints)[0]
-					if point.Ipv4Address != "" {
-						nfUri = getSbiUri(service.Scheme, point.Ipv4Address, point.Port)
-					} else if len(nfProfile.Ipv4Addresses) != 0 {
-						nfUri = getSbiUri(service.Scheme, nfProfile.Ipv4Addresses[0], point.Port)
-					}
+	services := nfProfile.NfServices
+	// Rel-16+: NRF may return services only in nfServiceList (nfServices is deprecated)
+	if len(services) == 0 && len(nfProfile.NfServiceList) != 0 {
+		services = make([]models.Nrf_NFDisc_NFService, 0, len(nfProfile.NfServiceList))
+		for _, service := range nfProfile.NfServiceList {
+			services = append(services, service)
+		}
+	}
+
+	for _, service := range services {
+		if service.ServiceName == serviceName && service.NfServiceStatus == nfServiceStatus {
+			if nfProfile.Fqdn != "" {
+				nfUri = nfProfile.Fqdn
+			} else if service.Fqdn != "" {
+				nfUri = service.Fqdn
+			} else if service.ApiPrefix != "" {
+				nfUri = service.ApiPrefix
+			} else if service.IpEndPoints != nil {
+				point := (service.IpEndPoints)[0]
+				if point.Ipv4Address != "" {
+					nfUri = getSbiUri(service.Scheme, point.Ipv4Address, point.Port)
+				} else if len(nfProfile.Ipv4Addresses) != 0 {
+					nfUri = getSbiUri(service.Scheme, nfProfile.Ipv4Addresses[0], point.Port)
 				}
 			}
-			if nfUri != "" {
-				break
-			}
+		}
+		if nfUri != "" {
+			break
 		}
 	}
 	return
