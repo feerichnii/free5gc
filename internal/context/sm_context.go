@@ -217,6 +217,10 @@ type SMContext struct {
 
 	// Charging Related
 	ChargingDataRef string
+	// InvocationSequenceNumber is the Nchf ChargingDataRequest sequence for this PDU session.
+	// The first request uses 1. The generated model marks the field omitempty, so 0 is
+	// omitted from JSON and the CHF rejects the body as a missing required field.
+	InvocationSequenceNumber int32
 	// Each PDU session has a unique charging id
 	ChargingID    int32
 	RequestedUnit int32

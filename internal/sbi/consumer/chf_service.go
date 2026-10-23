@@ -59,6 +59,10 @@ func (s *nchfService) buildConvergedChargingRequest(smContext *smf_context.SMCon
 		}
 	}
 
+	// TS 32.291 increments this for every Charging Data Request in the session.
+	// Start at 1 so encoding/json keeps the required field (omitempty drops 0).
+	smContext.InvocationSequenceNumber++
+
 	req := &models.Chf_ConvCharging_ChargingDataRequest{
 		ChargingId:           smContext.ChargingID,
 		SubscriberIdentifier: smContext.Supi,
@@ -68,8 +72,9 @@ func (s *nchfService) buildConvergedChargingRequest(smContext *smf_context.SMCon
 			// not sure if NFIPv4Address is RegisterIPv4 or BindingIPv4
 			NFIPv4Address: smfContext.RegisterIPv4,
 		},
-		InvocationTimeStamp: &date,
-		Triggers:            triggers,
+		InvocationTimeStamp:      &date,
+		InvocationSequenceNumber: smContext.InvocationSequenceNumber,
+		Triggers:                 triggers,
 		PDUSessionChargingInformation: &models.Chf_ConvCharging_PDUSessionChargingInformation{
 			ChargingId: smContext.ChargingID,
 			UserInformation: &models.Chf_ConvCharging_UserInformation{
