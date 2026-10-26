@@ -82,7 +82,7 @@ func (s *npcfService) SendSMPolicyAssociationCreate(smContext *smf_context.SMCon
 	smPolicyData.RatType = smContext.RatType
 	smPolicyData.Ipv4Address = smContext.PDUAddress.To4().String()
 	smPolicyData.SubsSessAmbr = smContext.DnnConfiguration.SessionAmbr
-	smPolicyData.SubsDefQos = smContext.DnnConfiguration.Var5gQosProfile
+	smPolicyData.SubsDefQos = smPolicySubscribedDefaultQos(smContext.DnnConfiguration.Var5gQosProfile)
 	smPolicyData.SliceInfo = smContext.SNssai
 	smPolicyData.ServingNetwork = &models.PlmnIdNid{
 		Mcc: smContext.ServingNetwork.Mcc,
@@ -122,6 +122,30 @@ func (s *npcfService) SendSMPolicyAssociationCreate(smContext *smf_context.SMCon
 		return "", nil, fmt.Errorf("SMPolicy ID parse failed")
 	}
 	return smPolicyID, smPolicyDecision, nil
+}
+
+// smPolicySubscribedDefaultQos copies the subscribed default QoS for the SM Policy
+// Create request. PCF requires arp.preemptCap and arp.preemptVuln. UDM often omits
+// them, and encoding/json drops the empty strings. Missing values use the same
+// defaults as NGAP ARP encoding: NOT_PREEMPT and NOT_PREEMPTABLE.
+func smPolicySubscribedDefaultQos(qos *models.SubscribedDefaultQos) *models.SubscribedDefaultQos {
+	if qos == nil || qos.Arp == nil {
+		return qos
+	}
+	if qos.Arp.PreemptCap != "" && qos.Arp.PreemptVuln != "" {
+		return qos
+	}
+
+	copied := *qos
+	arp := *qos.Arp
+	if arp.PreemptCap == "" {
+		arp.PreemptCap = models.PreemptionCapability_NOT_PREEMPT
+	}
+	if arp.PreemptVuln == "" {
+		arp.PreemptVuln = models.PreemptionVulnerability_NOT_PREEMPTABLE
+	}
+	copied.Arp = &arp
+	return &copied
 }
 
 var smPolicyRegexp = regexp.MustCompile(`http[s]?\://.*/npcf-smpolicycontrol/v\d+/sm-policies/(.*)`)
