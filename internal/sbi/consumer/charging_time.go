@@ -106,13 +106,12 @@ func (t naiveDateTimeRoundTripper) RoundTrip(req *http.Request) (*http.Response,
 
 func (s *nchfService) convergedChargingHTTPClient(uri string) *http.Client {
 	https := strings.HasPrefix(strings.ToLower(uri), "https://")
-	readIdle := openapi.TransportReadIdleTimeout
-	ping := openapi.TransportPingTimeout
-	if s.consumer != nil && s.consumer.Config() != nil {
-		readIdle = s.consumer.Config().GetReadIdleTimeout()
-		ping = s.consumer.Config().GetPingTimeout()
-	}
-	client := openapi.NewHttp2Client(https, openapi.ClientTimeout, readIdle, ping)
+	client := openapi.NewHttp2Client(
+		https,
+		openapi.ClientTimeout,
+		openapi.TransportReadIdleTimeout,
+		openapi.TransportPingTimeout,
+	)
 	client.Transport = naiveDateTimeRoundTripper{base: client.Transport}
 	return client
 }
