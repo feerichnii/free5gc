@@ -36,6 +36,7 @@ func (s *nchfService) getConvergedChargingClient(uri string) *ConvCharging.APICl
 	configuration := ConvCharging.NewConfiguration()
 	configuration.SetBasePath(uri)
 	configuration.SetMetrics(sbi_metrics.SbiMetricHook)
+	configuration.SetHTTPClient(s.convergedChargingHTTPClient(uri))
 	client = ConvCharging.NewAPIClient(configuration)
 
 	s.ConvergedChargingMu.RUnlock()
