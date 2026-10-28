@@ -14,6 +14,7 @@ import (
 	"github.com/free5gc/openapi/models"
 	"github.com/free5gc/openapi/pcf/SMPolCtrl"
 	smf_context "github.com/free5gc/smf/internal/context"
+	"github.com/free5gc/smf/internal/util"
 	"github.com/free5gc/util/flowdesc"
 	sbi_metrics "github.com/free5gc/util/metrics/sbi"
 )
@@ -53,14 +54,7 @@ func (s *npcfService) getSMPolicyControlClient(uri string) *SMPolCtrl.APIClient 
 func (s *npcfService) SendSMPolicyAssociationCreate(smContext *smf_context.SMContext) (
 	string, *models.Pcf_SMPolCtrl_SmPolicyDecision, error,
 ) {
-	var client *SMPolCtrl.APIClient
-
-	// Create SMPolicyControl Client for this SM Context
-	for _, service := range smContext.SelectedPCFProfile.NfServices {
-		if service.ServiceName == models.Nrf_NFMgmt_ServiceName_NPCF_SMPOLICYCONTROL {
-			client = s.getSMPolicyControlClient(service.ApiPrefix)
-		}
-	}
+	client := s.smPolicyClient(smContext)
 
 	if client == nil {
 		return "", nil, errors.Errorf("smContext not selected PCF")
@@ -236,13 +230,9 @@ func (s *npcfService) SendSMPolicyAssociationUpdateByUERequestModification(
 		return nil, err
 	}
 
-	var client *SMPolCtrl.APIClient
-
-	// Create SMPolicyControl Client for this SM Context
-	for _, service := range smContext.SelectedPCFProfile.NfServices {
-		if service.ServiceName == models.Nrf_NFMgmt_ServiceName_NPCF_SMPOLICYCONTROL {
-			client = s.getSMPolicyControlClient(service.ApiPrefix)
-		}
+	client := s.smPolicyClient(smContext)
+	if client == nil {
+		return nil, errors.Errorf("smContext not selected PCF")
 	}
 
 	var smPolicyDecision *models.Pcf_SMPolCtrl_SmPolicyDecision
@@ -332,15 +322,15 @@ func (s *npcfService) buildPktFilterInfo(pf nasie.PacketFilter) (*models.Pcf_SMP
 	return pfInfo, nil
 }
 
-func (s *npcfService) SendSMPolicyAssociationTermination(smContext *smf_context.SMContext) error {
-	var client *SMPolCtrl.APIClient
+func (s *npcfService) smPolicyClient(smContext *smf_context.SMContext) *SMPolCtrl.APIClient {
+	uri := util.SearchNFServiceUri(&smContext.SelectedPCFProfile,
+		models.Nrf_NFMgmt_ServiceName_NPCF_SMPOLICYCONTROL,
+		models.Nrf_NFMgmt_NFServiceStatus_REGISTERED)
+	return s.getSMPolicyControlClient(uri)
+}
 
-	// Create SMPolicyControl Client for this SM Context
-	for _, service := range smContext.SelectedPCFProfile.NfServices {
-		if service.ServiceName == models.Nrf_NFMgmt_ServiceName_NPCF_SMPOLICYCONTROL {
-			client = s.getSMPolicyControlClient(service.ApiPrefix)
-		}
-	}
+func (s *npcfService) SendSMPolicyAssociationTermination(smContext *smf_context.SMContext) error {
+	client := s.smPolicyClient(smContext)
 
 	if client == nil {
 		return errors.Errorf("smContext not selected PCF")
