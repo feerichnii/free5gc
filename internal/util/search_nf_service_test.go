@@ -66,6 +66,38 @@ func TestSearchNFServiceUri_PrefersNfServices(t *testing.T) {
 	}
 }
 
+func TestSearchNFServiceUri_ApiPrefixWins(t *testing.T) {
+	service := pcfService("172.16.74.1", 8082)
+	service.ApiPrefix = "http://pcf.example:9090"
+	profile := &models.Nrf_NFDisc_NFProfile{
+		Fqdn:       "pcf.example",
+		NfServices: []models.Nrf_NFDisc_NFService{service},
+	}
+
+	got := util.SearchNFServiceUri(profile,
+		models.Nrf_NFMgmt_ServiceName_NPCF_AM_POLICY_CONTROL,
+		models.Nrf_NFMgmt_NFServiceStatus_REGISTERED)
+	if got != "http://pcf.example:9090" {
+		t.Fatalf("apiPrefix uri = %q", got)
+	}
+}
+
+func TestSearchNFServiceUri_WithoutApiPrefixUsesEndpoint(t *testing.T) {
+	profile := &models.Nrf_NFDisc_NFProfile{
+		Fqdn: "pcf.example",
+		NfServiceList: map[string]models.Nrf_NFDisc_NFService{
+			"pcf": pcfService("172.16.74.9", 8080),
+		},
+	}
+
+	got := util.SearchNFServiceUri(profile,
+		models.Nrf_NFMgmt_ServiceName_NPCF_AM_POLICY_CONTROL,
+		models.Nrf_NFMgmt_NFServiceStatus_REGISTERED)
+	if got != "http://172.16.74.9:8080" {
+		t.Fatalf("endpoint uri = %q", got)
+	}
+}
+
 func TestSearchNFServiceUri_Empty(t *testing.T) {
 	profile := &models.Nrf_NFDisc_NFProfile{}
 	got := util.SearchNFServiceUri(profile,

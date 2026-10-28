@@ -20,26 +20,49 @@ func SearchNFServiceUri(nfProfile *models.Nrf_NFDisc_NFProfile, serviceName mode
 
 	for _, service := range services {
 		if service.ServiceName == serviceName && service.NfServiceStatus == nfServiceStatus {
-			if nfProfile.Fqdn != "" {
-				nfUri = nfProfile.Fqdn
-			} else if service.Fqdn != "" {
-				nfUri = service.Fqdn
-			} else if service.ApiPrefix != "" {
-				nfUri = service.ApiPrefix
-			} else if service.IpEndPoints != nil {
-				point := (service.IpEndPoints)[0]
-				if point.Ipv4Address != "" {
-					nfUri = getSbiUri(service.Scheme, point.Ipv4Address, point.Port)
-				} else if len(nfProfile.Ipv4Addresses) != 0 {
-					nfUri = getSbiUri(service.Scheme, nfProfile.Ipv4Addresses[0], point.Port)
-				}
-			}
+			nfUri = serviceBaseURI(nfProfile, service)
 		}
 		if nfUri != "" {
 			break
 		}
 	}
 	return
+}
+
+// serviceBaseURI is the HTTP client base path for one NF service.
+// free5GC stores scheme://ip:port in apiPrefix. A foreign profile can omit it
+// and publish scheme plus ipEndPoints instead.
+func serviceBaseURI(nfProfile *models.Nrf_NFDisc_NFProfile, service models.Nrf_NFDisc_NFService) string {
+	if service.ApiPrefix != "" {
+		return service.ApiPrefix
+	}
+
+	scheme := service.Scheme
+	if scheme == "" {
+		scheme = models.UriScheme_HTTP
+	}
+
+	var addr string
+	var port int32
+	if len(service.IpEndPoints) > 0 {
+		point := service.IpEndPoints[0]
+		port = point.Port
+		addr = point.Ipv4Address
+	}
+	if addr == "" && len(nfProfile.Ipv4Addresses) > 0 {
+		addr = nfProfile.Ipv4Addresses[0]
+	}
+	if addr == "" {
+		if service.Fqdn != "" {
+			addr = service.Fqdn
+		} else {
+			addr = nfProfile.Fqdn
+		}
+	}
+	if addr == "" {
+		return ""
+	}
+	return getSbiUri(scheme, addr, port)
 }
 
 func getSbiUri(scheme models.UriScheme, ipv4Address string, port int32) (uri string) {
