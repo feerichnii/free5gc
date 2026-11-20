@@ -122,6 +122,48 @@ configuration:
   urrThreshold: 500000 # default usage report threshold in bytes
   requestedUnit: 1000
 
+  # Optional templates for a PCF that returns PCC rules with only pccRuleId.
+  # A rule that already has flowInfos is left unchanged.
+  # pccRuleTemplates:
+  #   GENERIC:
+  #     flowInfos:
+  #       - flowDescription: permit out ip from any to assigned
+  #         flowDirection: BIDIRECTIONAL
+  #         packetFilterUsage: true
+  #     precedence: 255
+  #     refChgData:
+  #       - ChgId-1
+  #   SERVICE_1:
+  #     flowInfos:
+  #       - flowDescription: permit out ip from 1.1.1.1/32 to assigned
+  #         flowDirection: BIDIRECTIONAL
+  #     precedence: 128
+  #     refQosData:
+  #       - "1"
+  #     refChgData:
+  #       - ChgId-2
+  # qosDecs:
+  #   "1":
+  #     qosId: "1"
+  #     5qi: 9
+  #     maxbrUl: 108 Mbps
+  #     maxbrDl: 108 Mbps
+  #     gbrUl: 208 Mbps
+  #     gbrDl: 208 Mbps
+  # chgDecs:
+  #   ChgId-1:
+  #     chgId: ChgId-1
+  #     meteringMethod: VOLUME
+  #     online: true
+  #     ratingGroup: 100
+  #     reportingLevel: RAT_GR_LEVEL
+  #   ChgId-2:
+  #     chgId: ChgId-2
+  #     meteringMethod: VOLUME
+  #     online: true
+  #     ratingGroup: 200
+  #     reportingLevel: RAT_GR_LEVEL
+
 # Logging Configuration
 logger:
   enable: true # true or false
