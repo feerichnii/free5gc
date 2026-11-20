@@ -79,6 +79,9 @@ func (c *SMContext) ApplyPccRules(decision *models.Pcf_SMPolCtrl_SmPolicyDecisio
 	if decision == nil {
 		return fmt.Errorf("SmPolicyDecision is nil")
 	}
+	if err := supplementPccRulesFromConfig(decision); err != nil {
+		return err
+	}
 
 	finalPccRules := make(map[string]*PCCRule)
 	finalTcDatas := make(map[string]*TrafficControlData)
@@ -541,6 +544,74 @@ func (c *SMContext) PostRemoveDataPath() {
 		delete(c.DataPathToBeRemoved, id)
 	}
 	c.removeRetiredULCLPDRs()
+}
+
+func isStubPccRule(rule *models.Pcf_SMPolCtrl_PccRule) bool {
+	return rule != nil && len(rule.FlowInfos) == 0 && rule.AppId == ""
+}
+
+func supplementPccRulesFromConfig(decision *models.Pcf_SMPolCtrl_SmPolicyDecision) error {
+	var templates map[string]*models.Pcf_SMPolCtrl_PccRule
+	var qosDecs map[string]*models.Pcf_SMPolCtrl_QosData
+	var chgDecs map[string]*models.Pcf_SMPolCtrl_ChargingData
+	if factory.SmfConfig != nil && factory.SmfConfig.Configuration != nil {
+		templates = factory.SmfConfig.Configuration.PccRuleTemplates
+		qosDecs = factory.SmfConfig.Configuration.QosDecs
+		chgDecs = factory.SmfConfig.Configuration.ChgDecs
+	}
+
+	for id, rule := range decision.PccRules {
+		if !isStubPccRule(rule) {
+			continue
+		}
+		key := rule.PccRuleId
+		if key == "" {
+			key = id
+		}
+		tmpl := templates[key]
+		if tmpl == nil {
+			tmpl = templates[id]
+		}
+		if tmpl == nil {
+			return fmt.Errorf("PCC rule %s has no flow description and no SMF template", key)
+		}
+
+		rule.FlowInfos = append([]models.Pcf_SMPolCtrl_FlowInformation(nil), tmpl.FlowInfos...)
+		rule.Precedence = tmpl.Precedence
+		rule.RefChgData = append([]string(nil), tmpl.RefChgData...)
+		rule.RefQosData = append([]string(nil), tmpl.RefQosData...)
+		if rule.PccRuleId == "" {
+			rule.PccRuleId = key
+		}
+
+		for _, chgID := range rule.RefChgData {
+			if decision.ChgDecs[chgID] != nil || chgDecs[chgID] == nil {
+				continue
+			}
+			if decision.ChgDecs == nil {
+				decision.ChgDecs = make(map[string]*models.Pcf_SMPolCtrl_ChargingData)
+			}
+			copied := *chgDecs[chgID]
+			if copied.ChgId == "" {
+				copied.ChgId = chgID
+			}
+			decision.ChgDecs[chgID] = &copied
+		}
+		for _, qosID := range rule.RefQosData {
+			if decision.QosDecs[qosID] != nil || qosDecs[qosID] == nil {
+				continue
+			}
+			if decision.QosDecs == nil {
+				decision.QosDecs = make(map[string]*models.Pcf_SMPolCtrl_QosData)
+			}
+			copied := *qosDecs[qosID]
+			if copied.QosId == "" {
+				copied.QosId = qosID
+			}
+			decision.QosDecs[qosID] = &copied
+		}
+	}
+	return nil
 }
 
 func applyFlowInfoOrPFD(c *SMContext, pcc *PCCRule) error {

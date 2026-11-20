@@ -110,6 +110,12 @@ type Configuration struct {
 	T3592                *TimerValue          `yaml:"t3592" valid:"required"`
 	NwInstFqdnEncoding   bool                 `yaml:"nwInstFqdnEncoding" valid:"type(bool),optional"`
 	RequestedUnit        int32                `yaml:"requestedUnit,omitempty" valid:"optional"`
+	// PccRuleTemplates fills PCC rules that a third-party PCF returns with only a pccRuleId.
+	PccRuleTemplates map[string]*models.Pcf_SMPolCtrl_PccRule `yaml:"pccRuleTemplates,omitempty" valid:"optional"`
+	// QosDecs and ChgDecs are inserted into an SM policy decision when a template
+	// references them and the PCF did not send that object.
+	QosDecs map[string]*models.Pcf_SMPolCtrl_QosData      `yaml:"qosDecs,omitempty" valid:"optional"`
+	ChgDecs map[string]*models.Pcf_SMPolCtrl_ChargingData `yaml:"chgDecs,omitempty" valid:"optional"`
 }
 
 type Logger struct {
