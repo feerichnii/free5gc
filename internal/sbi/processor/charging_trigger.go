@@ -38,6 +38,7 @@ func (p *Processor) UpdateChargingSession(
 				QuotaManagementIndicator: chgInfo.ChargingMethod,
 				Triggers:                 []models.Chf_ConvCharging_Trigger{trigger},
 				TriggerTimestamp:         &triggerTime,
+				LocalSequenceNumber:      smContext.NextLocalSequenceNumber(),
 			}
 
 			muu := models.Chf_ConvCharging_MultipleUnitUsage{
@@ -245,6 +246,7 @@ func buildMultiUnitUsageFromUsageReport(
 				DownlinkVolume:           int32(ur.DownlinkVolume),
 				UplinkVolume:             int32(ur.UplinkVolume),
 				TotalVolume:              int32(ur.TotalVolume),
+				LocalSequenceNumber:      smContext.NextLocalSequenceNumber(),
 			}
 			upfID := ur.UpfId
 			if upfID == "" {

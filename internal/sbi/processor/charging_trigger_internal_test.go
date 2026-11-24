@@ -62,6 +62,11 @@ func TestRetiredTIUsageDoesNotRequestNewQuota(t *testing.T) {
 	require.Len(t, usages, 1)
 	require.Len(t, usages[0].UsedUnitContainer, 2)
 	require.NotNil(t, usages[0].RequestedUnit, "retiring TI must not suppress the live service's credit request")
+	seqs := []int32{
+		usages[0].UsedUnitContainer[0].LocalSequenceNumber,
+		usages[0].UsedUnitContainer[1].LocalSequenceNumber,
+	}
+	require.ElementsMatch(t, []int32{3, 4}, seqs)
 }
 
 func TestDeletingTIURRStopsTimersButKeepsFinalChargingIdentity(t *testing.T) {
@@ -88,6 +93,7 @@ func TestDeletingTIURRStopsTimersButKeepsFinalChargingIdentity(t *testing.T) {
 	usages := buildMultiUnitUsageFromUsageReport(sm)
 	require.Len(t, usages, 1)
 	require.Equal(t, int32(300), usages[0].UsedUnitContainer[0].TotalVolume)
+	require.Equal(t, int32(1), usages[0].UsedUnitContainer[0].LocalSequenceNumber)
 	require.Nil(t, usages[0].RequestedUnit)
 	// A delayed CHF response must not recreate a quota or timer after deletion.
 	(&Processor{}).updateGrantedQuota(sm, []models.Chf_ConvCharging_MultipleUnitInformation{{

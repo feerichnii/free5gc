@@ -221,6 +221,10 @@ type SMContext struct {
 	// The first request uses 1. The generated model marks the field omitempty, so 0 is
 	// omitted from JSON and the CHF rejects the body as a missing required field.
 	InvocationSequenceNumber int32
+	// LocalSequenceNumber is the next Nchf UsedUnitContainer sequence for this PDU session.
+	// The first container uses 1. The generated model marks the field omitempty, so 0 is
+	// omitted from JSON and the CHF rejects the update as a missing required field.
+	LocalSequenceNumber int32
 	// Each PDU session has a unique charging id
 	ChargingID    int32
 	RequestedUnit int32
@@ -511,6 +515,13 @@ func (smContext *SMContext) BeginChargingRelease() bool {
 	}
 	smContext.chargingReleaseDone = true
 	return true
+}
+
+// NextLocalSequenceNumber allocates the next UsedUnitContainer.localSequenceNumber.
+// The value starts at 1 so encoding/json keeps the required field.
+func (smContext *SMContext) NextLocalSequenceNumber() int32 {
+	smContext.LocalSequenceNumber++
+	return smContext.LocalSequenceNumber
 }
 
 func (smContext *SMContext) GetNodeIDByLocalSEID(seid uint64) pfcptype.NodeID {
