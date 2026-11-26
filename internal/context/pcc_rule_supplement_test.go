@@ -61,7 +61,7 @@ func TestSupplementStubPccRuleFromConfig(t *testing.T) {
 		},
 	}
 
-	if err := supplementPccRulesFromConfig(decision); err != nil {
+	if err := SupplementPccRulesFromConfig(decision); err != nil {
 		t.Fatalf("supplement: %v", err)
 	}
 
@@ -138,7 +138,7 @@ func TestSupplementStubPccRuleWithoutTemplate(t *testing.T) {
 			"GENERIC": {PccRuleId: "GENERIC"},
 		},
 	}
-	err := supplementPccRulesFromConfig(decision)
+	err := SupplementPccRulesFromConfig(decision)
 	if err == nil || err.Error() != "PCC rule GENERIC has no flow description and no SMF template" {
 		t.Fatalf("err = %v", err)
 	}

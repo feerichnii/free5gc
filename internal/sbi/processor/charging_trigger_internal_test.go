@@ -160,3 +160,34 @@ func TestInitialMultipleUnitUsageFromPccRules(t *testing.T) {
 	require.Equal(t, int32(1000), usage[0].RequestedUnit.TotalVolume)
 	require.Nil(t, usage[1].RequestedUnit, "offline rating group does not request quota")
 }
+
+func TestInitialMultipleUnitUsageUsesLocalPccRuleTemplate(t *testing.T) {
+	old := factory.SmfConfig
+	t.Cleanup(func() { factory.SmfConfig = old })
+	factory.SmfConfig = &factory.Config{Configuration: &factory.Configuration{
+		ChargingCreateMultipleUnitUsage: "ratingGroupQuota",
+		PccRuleTemplates: map[string]*models.Pcf_SMPolCtrl_PccRule{
+			"SERVICE_1": {
+				FlowInfos: []models.Pcf_SMPolCtrl_FlowInformation{{
+					FlowDescription: "permit out ip from any to assigned",
+				}},
+				RefChgData: []string{"ChgId-1"},
+			},
+		},
+		ChgDecs: map[string]*models.Pcf_SMPolCtrl_ChargingData{
+			"ChgId-1": {ChgId: "ChgId-1", RatingGroup: 100, Online: true},
+		},
+	}}
+
+	decision := &models.Pcf_SMPolCtrl_SmPolicyDecision{
+		PccRules: map[string]*models.Pcf_SMPolCtrl_PccRule{
+			"SERVICE_1": {PccRuleId: "SERVICE_1"},
+		},
+	}
+	require.NoError(t, smf_context.SupplementPccRulesFromConfig(decision))
+	usage := initialMultipleUnitUsage(&smf_context.SMContext{RequestedUnit: 1000}, decision)
+	require.Len(t, usage, 1)
+	require.Equal(t, int32(100), usage[0].RatingGroup)
+	require.NotNil(t, usage[0].RequestedUnit)
+	require.Equal(t, int32(1000), usage[0].RequestedUnit.TotalVolume)
+}

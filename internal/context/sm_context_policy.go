@@ -79,7 +79,7 @@ func (c *SMContext) ApplyPccRules(decision *models.Pcf_SMPolCtrl_SmPolicyDecisio
 	if decision == nil {
 		return fmt.Errorf("SmPolicyDecision is nil")
 	}
-	if err := supplementPccRulesFromConfig(decision); err != nil {
+	if err := SupplementPccRulesFromConfig(decision); err != nil {
 		return err
 	}
 
@@ -550,7 +550,7 @@ func isStubPccRule(rule *models.Pcf_SMPolCtrl_PccRule) bool {
 	return rule != nil && len(rule.FlowInfos) == 0 && rule.AppId == ""
 }
 
-func supplementPccRulesFromConfig(decision *models.Pcf_SMPolCtrl_SmPolicyDecision) error {
+func SupplementPccRulesFromConfig(decision *models.Pcf_SMPolCtrl_SmPolicyDecision) error {
 	var templates map[string]*models.Pcf_SMPolCtrl_PccRule
 	var qosDecs map[string]*models.Pcf_SMPolCtrl_QosData
 	var chgDecs map[string]*models.Pcf_SMPolCtrl_ChargingData

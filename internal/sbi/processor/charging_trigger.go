@@ -14,6 +14,13 @@ import (
 )
 
 func (p *Processor) CreateChargingSession(smContext *smf_context.SMContext, decision *models.Pcf_SMPolCtrl_SmPolicyDecision) {
+	// Templates fill refChgData and chgDecs before this request is built. Create runs
+	// before ApplyPccRules, and a third-party PCF often sends only the pccRuleId.
+	if decision != nil {
+		if err := smf_context.SupplementPccRulesFromConfig(decision); err != nil {
+			logger.ChargingLog.Warnf("PCC rule template for charging create: %+v", err)
+		}
+	}
 	_, problemDetails, err := p.Consumer().SendConvergedChargingRequest(smContext, smf_context.CHARGING_INIT,
 		initialMultipleUnitUsage(smContext, decision))
 	if problemDetails != nil {
@@ -27,8 +34,8 @@ func (p *Processor) CreateChargingSession(smContext *smf_context.SMContext, deci
 
 // initialMultipleUnitUsage builds the Charging Data Create multipleUnitUsage.
 // none keeps the historical request with no multipleUnitUsage. ratingGroup lists
-// each rating group referenced by the PCF PCC rules. ratingGroupQuota also asks
-// for quota on online charging data.
+// each rating group referenced by the PCC rules after local templates are applied.
+// ratingGroupQuota also asks for quota on online charging data.
 func initialMultipleUnitUsage(
 	smContext *smf_context.SMContext, decision *models.Pcf_SMPolCtrl_SmPolicyDecision,
 ) []models.Chf_ConvCharging_MultipleUnitUsage {
