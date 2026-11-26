@@ -110,6 +110,10 @@ type Configuration struct {
 	T3592                *TimerValue          `yaml:"t3592" valid:"required"`
 	NwInstFqdnEncoding   bool                 `yaml:"nwInstFqdnEncoding" valid:"type(bool),optional"`
 	RequestedUnit        int32                `yaml:"requestedUnit,omitempty" valid:"optional"`
+	// ChargingCreateMultipleUnitUsage controls multipleUnitUsage on Nchf Charging Data Create.
+	// none: omit it. ratingGroup: one entry per rating group referenced by PCC rules.
+	// ratingGroupQuota: also request quota for online charging data.
+	ChargingCreateMultipleUnitUsage string `yaml:"chargingCreateMultipleUnitUsage,omitempty" valid:"optional,in(none|ratingGroup|ratingGroupQuota)"`
 	// PccRuleTemplates fills PCC rules that a third-party PCF returns with only a pccRuleId.
 	PccRuleTemplates map[string]*models.Pcf_SMPolCtrl_PccRule `yaml:"pccRuleTemplates,omitempty" valid:"optional"`
 	// QosDecs and ChgDecs are inserted into an SM policy decision when a template

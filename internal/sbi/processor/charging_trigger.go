@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"sort"
 	"time"
 
 	"github.com/wmnsk/go-pfcp/ie"
@@ -9,10 +10,12 @@ import (
 	smf_context "github.com/free5gc/smf/internal/context"
 	"github.com/free5gc/smf/internal/logger"
 	"github.com/free5gc/smf/internal/pfcp/pfcptype"
+	"github.com/free5gc/smf/pkg/factory"
 )
 
-func (p *Processor) CreateChargingSession(smContext *smf_context.SMContext) {
-	_, problemDetails, err := p.Consumer().SendConvergedChargingRequest(smContext, smf_context.CHARGING_INIT, nil)
+func (p *Processor) CreateChargingSession(smContext *smf_context.SMContext, decision *models.Pcf_SMPolCtrl_SmPolicyDecision) {
+	_, problemDetails, err := p.Consumer().SendConvergedChargingRequest(smContext, smf_context.CHARGING_INIT,
+		initialMultipleUnitUsage(smContext, decision))
 	if problemDetails != nil {
 		logger.ChargingLog.Errorf("Send Charging Data Request[Init] Failed Problem[%+v]", problemDetails)
 	} else if err != nil {
@@ -20,6 +23,52 @@ func (p *Processor) CreateChargingSession(smContext *smf_context.SMContext) {
 	} else {
 		logger.ChargingLog.Infof("Send Charging Data Request[Init] successfully")
 	}
+}
+
+// initialMultipleUnitUsage builds the Charging Data Create multipleUnitUsage.
+// none keeps the historical request with no multipleUnitUsage. ratingGroup lists
+// each rating group referenced by the PCF PCC rules. ratingGroupQuota also asks
+// for quota on online charging data.
+func initialMultipleUnitUsage(
+	smContext *smf_context.SMContext, decision *models.Pcf_SMPolCtrl_SmPolicyDecision,
+) []models.Chf_ConvCharging_MultipleUnitUsage {
+	mode := ""
+	if factory.SmfConfig != nil && factory.SmfConfig.Configuration != nil {
+		mode = factory.SmfConfig.Configuration.ChargingCreateMultipleUnitUsage
+	}
+	if mode == "" || mode == "none" || decision == nil {
+		return nil
+	}
+
+	withQuota := mode == "ratingGroupQuota"
+	seen := map[int32]struct{}{}
+	var usage []models.Chf_ConvCharging_MultipleUnitUsage
+	for _, rule := range decision.PccRules {
+		if rule == nil {
+			continue
+		}
+		for _, chgID := range rule.RefChgData {
+			chg := decision.ChgDecs[chgID]
+			if chg == nil || chg.RatingGroup == 0 {
+				continue
+			}
+			if _, ok := seen[chg.RatingGroup]; ok {
+				continue
+			}
+			seen[chg.RatingGroup] = struct{}{}
+			item := models.Chf_ConvCharging_MultipleUnitUsage{RatingGroup: chg.RatingGroup}
+			if withQuota && chg.Online && smContext != nil && smContext.RequestedUnit > 0 {
+				item.RequestedUnit = &models.Chf_ConvCharging_RequestedUnit{
+					TotalVolume:    smContext.RequestedUnit,
+					UplinkVolume:   smContext.RequestedUnit,
+					DownlinkVolume: smContext.RequestedUnit,
+				}
+			}
+			usage = append(usage, item)
+		}
+	}
+	sort.Slice(usage, func(i, j int) bool { return usage[i].RatingGroup < usage[j].RatingGroup })
+	return usage
 }
 
 func (p *Processor) UpdateChargingSession(

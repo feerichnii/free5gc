@@ -8,6 +8,7 @@ import (
 
 	"github.com/free5gc/openapi/models"
 	smf_context "github.com/free5gc/smf/internal/context"
+	"github.com/free5gc/smf/pkg/factory"
 )
 
 func TestRetiredTIUsageDoesNotRequestNewQuota(t *testing.T) {
@@ -122,4 +123,40 @@ func TestStaticAnchorsKeepSeparateChargingUPFIdentity(t *testing.T) {
 		volumes[usage.UPFID] = usage.UsedUnitContainer[0].TotalVolume
 	}
 	require.Equal(t, map[string]int32{"old-anchor": 100, "mec-anchor": 200}, volumes)
+}
+
+func TestInitialMultipleUnitUsageFromPccRules(t *testing.T) {
+	old := factory.SmfConfig
+	t.Cleanup(func() { factory.SmfConfig = old })
+
+	decision := &models.Pcf_SMPolCtrl_SmPolicyDecision{
+		PccRules: map[string]*models.Pcf_SMPolCtrl_PccRule{
+			"GENERIC":   {PccRuleId: "GENERIC", RefChgData: []string{"ChgId-1"}},
+			"SERVICE_1": {PccRuleId: "SERVICE_1", RefChgData: []string{"ChgId-2", "ChgId-1"}},
+		},
+		ChgDecs: map[string]*models.Pcf_SMPolCtrl_ChargingData{
+			"ChgId-1": {ChgId: "ChgId-1", RatingGroup: 100, Online: true},
+			"ChgId-2": {ChgId: "ChgId-2", RatingGroup: 200, Online: false},
+		},
+	}
+	sm := &smf_context.SMContext{RequestedUnit: 1000}
+
+	factory.SmfConfig = nil
+	require.Nil(t, initialMultipleUnitUsage(sm, decision))
+
+	factory.SmfConfig = &factory.Config{Configuration: &factory.Configuration{ChargingCreateMultipleUnitUsage: "none"}}
+	require.Nil(t, initialMultipleUnitUsage(sm, decision))
+
+	factory.SmfConfig.Configuration.ChargingCreateMultipleUnitUsage = "ratingGroup"
+	usage := initialMultipleUnitUsage(sm, decision)
+	require.Len(t, usage, 2)
+	require.Equal(t, int32(100), usage[0].RatingGroup)
+	require.Nil(t, usage[0].RequestedUnit)
+	require.Equal(t, int32(200), usage[1].RatingGroup)
+
+	factory.SmfConfig.Configuration.ChargingCreateMultipleUnitUsage = "ratingGroupQuota"
+	usage = initialMultipleUnitUsage(sm, decision)
+	require.NotNil(t, usage[0].RequestedUnit)
+	require.Equal(t, int32(1000), usage[0].RequestedUnit.TotalVolume)
+	require.Nil(t, usage[1].RequestedUnit, "offline rating group does not request quota")
 }

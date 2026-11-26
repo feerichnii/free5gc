@@ -268,7 +268,7 @@ func (p *Processor) HandlePDUSessionSMContextCreate(
 	if err = p.Consumer().CHFSelection(smContext); err != nil {
 		logger.PduSessLog.Errorln("chf selection error:", err)
 	} else {
-		p.CreateChargingSession(smContext)
+		p.CreateChargingSession(smContext, smPolicyDecision)
 	}
 
 	// Update SessionRule from decision
