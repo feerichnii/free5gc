@@ -121,6 +121,11 @@ configuration:
   urrPeriod: 30 # default usage report period in seconds
   urrThreshold: 500000 # default usage report threshold in bytes
   requestedUnit: 1000
+  # Nchf Charging Data Create multipleUnitUsage.
+  # none: do not send it (default).
+  # ratingGroup: one entry per rating group referenced by the PCF PCC rules.
+  # ratingGroupQuota: the same, plus requestedUnit for online charging data.
+  # chargingCreateMultipleUnitUsage: ratingGroupQuota
 
   # Optional templates for a PCF that returns PCC rules with only pccRuleId.
   # A rule that already has flowInfos is left unchanged.
